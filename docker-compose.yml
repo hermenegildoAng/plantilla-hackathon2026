@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hackathon_db
+    environment:
+      POSTGRES_DB: hackathon_db
+      POSTGRES_USER: hackathon_user
+      POSTGRES_PASSWORD: hackathon_password  # Cámbialo si quieres, pero para local está bien
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hackathon_user -d hackathon_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"  # Opcional: solo si quieres conectarte desde tu máquina (DBeaver, psql, etc.)
+
+  backend:
+    build: ./backend
+    container_name: hackathon_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_NAME=hackathon_db
+      - DB_USER=hackathon_user
+      - DB_PASSWORD=hackathon_password
+      - DB_HOST=db  # Este es el nombre del servicio de arriba, Docker lo resuelve solo
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy  # Espera a que Postgres esté listo antes de arrancar Django
+
+  frontend:
+    build: ./frontend
+    container_name: hackathon_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+volumes:
+  postgres_data:

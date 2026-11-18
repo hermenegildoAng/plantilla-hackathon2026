@@ -1,0 +1,54 @@
+# ==========================================
+# GITIGNORE MAESTRO - CONTABLE SAAS (Django + Vue + Docker)
+# ==========================================
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+db.sqlite3
+media/
+staticfiles/
+.pytest_cache/
+.mypy_cache/
+
+# Node / Vue 3 / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+
+# Entorno y Secretos
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# Docker & Volumes
+.docker/
+docker-data/
+
+# IDEs y Editores (VS Code / PyCharm / OpenCode)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs y Archivos Temporales
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+celerybeat-schedule
