@@ -1,21 +1,21 @@
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Instalamos dependencias del sistema necesarias para psycopg2 (si usas Postgres)
-RUN apt-get update && apt-get install -y \
-    libpq-dev gcc --no-install-recommends \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/local.txt
 
 COPY . .
 
 EXPOSE 8000
 
-# Para desarrollo, runserver es más rápido. En prod cambiarías a gunicorn.
+# Development entry point; production uses gunicorn with config.wsgi.
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
