@@ -119,6 +119,49 @@ class IsClientPortalAllowed(TenantRolePermission):
         return bool(getattr(view, "allow_client_write", False))
 
 
+class CanReadAccounting(TenantRolePermission):
+    """PARTNER, ACCOUNTANT and AUDITOR may read accounting data."""
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        if request.user.is_superuser:
+            return True
+        return get_membership_role(request) in {
+            CompanyMembership.Role.PARTNER,
+            CompanyMembership.Role.ACCOUNTANT,
+            CompanyMembership.Role.AUDITOR,
+        }
+
+
+class CanEditAccountCatalog(TenantRolePermission):
+    """PARTNER edits any account; ACCOUNTANT is limited to ``name`` [E-12]."""
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        if request.user.is_superuser:
+            return True
+        return get_membership_role(request) in {
+            CompanyMembership.Role.PARTNER,
+            CompanyMembership.Role.ACCOUNTANT,
+        }
+
+
+class IsPartnerOrAuditor(TenantRolePermission):
+    """Read-only governance endpoints visible to PARTNER and AUDITOR."""
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        if request.user.is_superuser:
+            return True
+        return get_membership_role(request) in {
+            CompanyMembership.Role.PARTNER,
+            CompanyMembership.Role.AUDITOR,
+        }
+
+
 class IsFiscalPeriodOpen(TenantRolePermission):
     """Block unsafe methods when the resolved fiscal period is closed.
 

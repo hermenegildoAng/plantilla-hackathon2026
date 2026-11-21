@@ -1,0 +1,722 @@
+[
+  {
+    "code": "100",
+    "parent_code": null,
+    "sat_group_code": "100",
+    "name": "Activo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "100.01",
+    "parent_code": "100",
+    "sat_group_code": "100.01",
+    "name": "Activo a corto plazo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "101",
+    "parent_code": "100.01",
+    "sat_group_code": "101",
+    "name": "Caja",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "101.01",
+    "parent_code": "101",
+    "sat_group_code": "101.01",
+    "name": "Caja y efectivo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "102",
+    "parent_code": "100.01",
+    "sat_group_code": "102",
+    "name": "Bancos",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "102.01",
+    "parent_code": "102",
+    "sat_group_code": "102.01",
+    "name": "Bancos nacionales",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "102.01.001",
+    "parent_code": "102.01",
+    "sat_group_code": "102.01",
+    "name": "BBVA Bancomer cuenta 0192837465",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "102.01.002",
+    "parent_code": "102.01",
+    "sat_group_code": "102.01",
+    "name": "Banorte cuenta 1234567890",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "102.01.003",
+    "parent_code": "102.01",
+    "sat_group_code": "102.01",
+    "name": "Santander cuenta 9876543210",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "102.02",
+    "parent_code": "102",
+    "sat_group_code": "102.02",
+    "name": "Bancos extranjeros",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "105",
+    "parent_code": "100.01",
+    "sat_group_code": "105",
+    "name": "Clientes",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "105.01",
+    "parent_code": "105",
+    "sat_group_code": "105.01",
+    "name": "Clientes nacionales",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "105.02",
+    "parent_code": "105",
+    "sat_group_code": "105.02",
+    "name": "Clientes extranjeros",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "108",
+    "parent_code": "100.01",
+    "sat_group_code": "108",
+    "name": "Estimación de cuentas incobrables",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "108.01",
+    "parent_code": "108",
+    "sat_group_code": "108.01",
+    "name": "Estimación de cuentas incobrables nacional",
+    "account_type": "ASSET",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "113",
+    "parent_code": "100.01",
+    "sat_group_code": "113",
+    "name": "Impuestos a favor",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "113.01",
+    "parent_code": "113",
+    "sat_group_code": "113.01",
+    "name": "IVA a favor",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "115",
+    "parent_code": "100.01",
+    "sat_group_code": "115",
+    "name": "Inventario",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "115.01",
+    "parent_code": "115",
+    "sat_group_code": "115.01",
+    "name": "Inventario",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "118",
+    "parent_code": "100.01",
+    "sat_group_code": "118",
+    "name": "Impuestos acreditables pagados",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "118.01",
+    "parent_code": "118",
+    "sat_group_code": "118.01",
+    "name": "IVA acreditable pagado",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "118.02",
+    "parent_code": "118",
+    "sat_group_code": "118.02",
+    "name": "IVA acreditable de importación pagado",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "120",
+    "parent_code": "100.01",
+    "sat_group_code": "120",
+    "name": "Anticipo a proveedores",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "120.01",
+    "parent_code": "120",
+    "sat_group_code": "120.01",
+    "name": "Anticipo a proveedores nacional",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "100.02",
+    "parent_code": "100",
+    "sat_group_code": "100.02",
+    "name": "Activo a largo plazo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "152",
+    "parent_code": "100.02",
+    "sat_group_code": "152",
+    "name": "Edificios",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "152.01",
+    "parent_code": "152",
+    "sat_group_code": "152.01",
+    "name": "Edificios",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "155",
+    "parent_code": "100.02",
+    "sat_group_code": "155",
+    "name": "Mobiliario y equipo de oficina",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "155.01",
+    "parent_code": "155",
+    "sat_group_code": "155.01",
+    "name": "Mobiliario y equipo de oficina",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "156",
+    "parent_code": "100.02",
+    "sat_group_code": "156",
+    "name": "Equipo de cómputo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "156.01",
+    "parent_code": "156",
+    "sat_group_code": "156.01",
+    "name": "Equipo de cómputo",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "171",
+    "parent_code": "100.02",
+    "sat_group_code": "171",
+    "name": "Depreciación acumulada de activos fijos",
+    "account_type": "ASSET",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "171.01",
+    "parent_code": "171",
+    "sat_group_code": "171.01",
+    "name": "Depreciación acumulada de edificios",
+    "account_type": "ASSET",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "171.04",
+    "parent_code": "171",
+    "sat_group_code": "171.04",
+    "name": "Depreciación acumulada de mobiliario y equipo de oficina",
+    "account_type": "ASSET",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "200",
+    "parent_code": null,
+    "sat_group_code": "200",
+    "name": "Pasivo",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "200.01",
+    "parent_code": "200",
+    "sat_group_code": "200.01",
+    "name": "Pasivo a corto plazo",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "201",
+    "parent_code": "200.01",
+    "sat_group_code": "201",
+    "name": "Proveedores",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "201.01",
+    "parent_code": "201",
+    "sat_group_code": "201.01",
+    "name": "Proveedores nacionales",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "201.02",
+    "parent_code": "201",
+    "sat_group_code": "201.02",
+    "name": "Proveedores extranjeros",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "202",
+    "parent_code": "200.01",
+    "sat_group_code": "202",
+    "name": "Cuentas por pagar a corto plazo",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "202.01",
+    "parent_code": "202",
+    "sat_group_code": "202.01",
+    "name": "Documentos por pagar bancario y financiero nacional",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "207",
+    "parent_code": "200.01",
+    "sat_group_code": "207",
+    "name": "Impuestos trasladados",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "207.01",
+    "parent_code": "207",
+    "sat_group_code": "207.01",
+    "name": "IVA trasladado",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "216",
+    "parent_code": "200.01",
+    "sat_group_code": "216",
+    "name": "Impuestos retenidos",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "216.01",
+    "parent_code": "216",
+    "sat_group_code": "216.01",
+    "name": "Impuestos retenidos de ISR por sueldos y salarios",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "216.04",
+    "parent_code": "216",
+    "sat_group_code": "216.04",
+    "name": "Impuestos retenidos de ISR por servicios profesionales",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "216.10",
+    "parent_code": "216",
+    "sat_group_code": "216.10",
+    "name": "Impuestos retenidos de IVA",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "216.12",
+    "parent_code": "216",
+    "sat_group_code": "216.12",
+    "name": "Otras impuestos retenidos",
+    "account_type": "LIABILITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "300",
+    "parent_code": null,
+    "sat_group_code": "300",
+    "name": "Capital contable",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "301",
+    "parent_code": "300",
+    "sat_group_code": "301",
+    "name": "Capital social",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "301.01",
+    "parent_code": "301",
+    "sat_group_code": "301.01",
+    "name": "Capital fijo",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "301.02",
+    "parent_code": "301",
+    "sat_group_code": "301.02",
+    "name": "Capital variable",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "304",
+    "parent_code": "300",
+    "sat_group_code": "304",
+    "name": "Resultado de ejercicios anteriores",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "304.01",
+    "parent_code": "304",
+    "sat_group_code": "304.01",
+    "name": "Utilidad de ejercicios anteriores",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "305",
+    "parent_code": "300",
+    "sat_group_code": "305",
+    "name": "Resultado del ejercicio",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "305.01",
+    "parent_code": "305",
+    "sat_group_code": "305.01",
+    "name": "Utilidad del ejercicio",
+    "account_type": "EQUITY",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "400",
+    "parent_code": null,
+    "sat_group_code": "400",
+    "name": "Ingresos",
+    "account_type": "REVENUE",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "401",
+    "parent_code": "400",
+    "sat_group_code": "401",
+    "name": "Ingresos",
+    "account_type": "REVENUE",
+    "nature": "CREDIT",
+    "is_selectable": false
+  },
+  {
+    "code": "401.01",
+    "parent_code": "401",
+    "sat_group_code": "401.01",
+    "name": "Ventas y/o servicios gravados a la tasa general",
+    "account_type": "REVENUE",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "401.04",
+    "parent_code": "401",
+    "sat_group_code": "401.04",
+    "name": "Ventas y/o servicios gravados al 0%",
+    "account_type": "REVENUE",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "401.19",
+    "parent_code": "401",
+    "sat_group_code": "401.19",
+    "name": "Ingresos por servicios profesionales",
+    "account_type": "REVENUE",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "402",
+    "parent_code": "400",
+    "sat_group_code": "402",
+    "name": "Devoluciones, descuentos o bonificaciones sobre ingresos",
+    "account_type": "REVENUE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "402.01",
+    "parent_code": "402",
+    "sat_group_code": "402.01",
+    "name": "Devoluciones, descuentos o bonificaciones sobre ventas y/o servicios a la tasa general",
+    "account_type": "REVENUE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "500",
+    "parent_code": null,
+    "sat_group_code": "500",
+    "name": "Costos",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "501",
+    "parent_code": "500",
+    "sat_group_code": "501",
+    "name": "Costo de venta y/o servicio",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "501.01",
+    "parent_code": "501",
+    "sat_group_code": "501.01",
+    "name": "Costo de venta",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "501.02",
+    "parent_code": "501",
+    "sat_group_code": "501.02",
+    "name": "Costo de servicios (Mano de obra)",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "600",
+    "parent_code": null,
+    "sat_group_code": "600",
+    "name": "Gastos",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "601",
+    "parent_code": "600",
+    "sat_group_code": "601",
+    "name": "Gastos generales",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "601.01",
+    "parent_code": "601",
+    "sat_group_code": "601.01",
+    "name": "Sueldos y salarios",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "601.34",
+    "parent_code": "601",
+    "sat_group_code": "601.34",
+    "name": "Honorarios a personas físicas residentes nacionales",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "601.38",
+    "parent_code": "601",
+    "sat_group_code": "601.38",
+    "name": "Honorarios a personas morales residentes nacionales",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "601.50",
+    "parent_code": "601",
+    "sat_group_code": "601.50",
+    "name": "Teléfono, internet",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "603",
+    "parent_code": "600",
+    "sat_group_code": "603",
+    "name": "Gastos de administración",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "603.34",
+    "parent_code": "603",
+    "sat_group_code": "603.34",
+    "name": "Honorarios a personas físicas residentes nacionales",
+    "account_type": "EXPENSE",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "800",
+    "parent_code": null,
+    "sat_group_code": "800",
+    "name": "Cuentas de orden",
+    "account_type": "ORDER",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "801",
+    "parent_code": "800",
+    "sat_group_code": "801",
+    "name": "UFIN del ejercicio",
+    "account_type": "ORDER",
+    "nature": "DEBIT",
+    "is_selectable": false
+  },
+  {
+    "code": "801.01",
+    "parent_code": "801",
+    "sat_group_code": "801.01",
+    "name": "UFIN",
+    "account_type": "ORDER",
+    "nature": "DEBIT",
+    "is_selectable": true
+  },
+  {
+    "code": "801.02",
+    "parent_code": "801",
+    "sat_group_code": "801.02",
+    "name": "Contra cuenta UFIN",
+    "account_type": "ORDER",
+    "nature": "CREDIT",
+    "is_selectable": true
+  },
+  {
+    "code": "899",
+    "parent_code": "800",
+    "sat_group_code": "899",
+    "name": "Otras cuentas de orden",
+    "account_type": "ORDER",
+    "nature": "DEBIT",
+    "is_selectable": true
+  }
+]
