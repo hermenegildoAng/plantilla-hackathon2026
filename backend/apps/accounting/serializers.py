@@ -158,8 +158,8 @@ class FiscalPeriodSerializer(serializers.ModelSerializer):
         return 0
 
     def get_unaccounted_documents_count(self, obj):
-        # TODO(bloque 4): count Document rows without an AccountingEntry.
-        return 0
+        # Documents without a linked accounting entry (block 5 will link them).
+        return obj.documents.filter(is_accounted=False).count()
 
 
 class PeriodReopenSerializer(serializers.Serializer):

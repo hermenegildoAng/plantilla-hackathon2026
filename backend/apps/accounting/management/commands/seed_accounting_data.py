@@ -1,9 +1,10 @@
-"""Idempotent demo seed for the accounting MVP (v1, block 3)."""
+"""Idempotent demo seed for the accounting MVP (blocks 3 and 4)."""
 
 import os
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -14,6 +15,9 @@ from apps.accounting.services import (
     get_or_create_period,
 )
 from apps.authentication.models import CompanyMembership, User
+from apps.documents.demo_data import build_demo_cfdi_files
+from apps.documents.models import Document
+from apps.documents.services import process_bulk_upload
 from apps.tenants.models import Company
 from apps.tenants.services import clone_master_sat_catalog
 
@@ -71,7 +75,7 @@ def _previous_month(today):
 class Command(BaseCommand):
     help = (
         "Carga datos demo idempotentes: 2 empresas, 4 usuarios, membresías, "
-        "catálogo SAT clonado y periodos contables."
+        "catálogo SAT clonado, periodos contables y 10 CFDI 4.0."
     )
 
     def add_arguments(self, parser):
@@ -101,14 +105,17 @@ class Command(BaseCommand):
         self._seed_memberships(companies, users)
         self._seed_catalogs(companies)
         periods = self._seed_periods(companies)
+        partner = users["socio@demo.mx"]
+
+        # E-25: documents are ingested with the same service as the API while
+        # the previous month is still open.
+        self._seed_documents(companies, partner)
 
         # E-25: close the previous month only after every demo row is loaded.
-        partner = users["socio@demo.mx"]
         for period in periods["previous"]:
             if not period.is_closed:
                 close_period(period, user=partner, ip_address="127.0.0.1")
 
-        # TODO(bloque 4): ingest the 10 demo CFDI XML files with parse_cfdi_xml.
         # TODO(bloque 5): create the demo accounting entries and reconciliation
         # movements with the same services used by the API.
 
@@ -171,6 +178,34 @@ class Command(BaseCommand):
             )
         return periods
 
+    def _seed_documents(self, companies, partner):
+        """Generate and ingest 10 CFDI 4.0 files (5 per demo company)."""
+        today = timezone.localdate()
+        for index, company in enumerate(companies):
+            counterpart = companies[(index + 1) % len(companies)]
+            files = [
+                SimpleUploadedFile(
+                    filename,
+                    content,
+                    content_type="application/xml",
+                )
+                for filename, content in build_demo_cfdi_files(
+                    company,
+                    counterpart,
+                    today,
+                )
+            ]
+            result = process_bulk_upload(
+                files,
+                company=company,
+                user=partner,
+            )
+            self.stdout.write(
+                f"Documentos {company.rfc}: "
+                f"{result['summary']['processed_count']} importados, "
+                f"{result['summary']['failed_count']} omitidos."
+            )
+
     def _report_counts(self, companies):
         company_ids = [company.pk for company in companies]
         self.stdout.write(
@@ -183,6 +218,8 @@ class Command(BaseCommand):
             "cuentas: "
             f"{AccountCatalog.objects.filter(company_id__in=company_ids).count()}, "
             "periodos: "
-            f"{FiscalPeriod.objects.filter(company_id__in=company_ids).count()}."
+            f"{FiscalPeriod.objects.filter(company_id__in=company_ids).count()}, "
+            "documentos: "
+            f"{Document.objects.filter(company_id__in=company_ids).count()}."
         )
         self.stdout.write(self.style.SUCCESS("Seed contable v1 completado."))

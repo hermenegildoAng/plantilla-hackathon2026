@@ -6,6 +6,7 @@ from django.core.management.base import CommandError
 from apps.accounting.models import AccountCatalog, FiscalPeriod
 from apps.authentication.models import CompanyMembership, User
 from apps.core.models import AuditLog
+from apps.documents.models import Document
 from apps.tenants.models import Company
 
 
@@ -21,6 +22,7 @@ def counts():
         "memberships": CompanyMembership.objects.count(),
         "accounts": AccountCatalog.objects.count(),
         "periods": FiscalPeriod.objects.count(),
+        "documents": Document.objects.count(),
         "audit_logs": AuditLog.objects.count(),
     }
 
@@ -40,6 +42,7 @@ def test_seed_creates_v1_demo_data(demo_password):
         "memberships": 7,
         "accounts": 160,
         "periods": 4,
+        "documents": 10,
         "audit_logs": 2,
     }
 
@@ -79,18 +82,30 @@ def test_seed_creates_v1_demo_data(demo_password):
         action=AuditLog.ActionType.PERIOD_CLOSED
     ).count() == 2
 
+    assert Document.objects.filter(direction=Document.Direction.ISSUED).count() == 6
+    assert Document.objects.filter(direction=Document.Direction.RECEIVED).count() == 4
+    assert Document.objects.filter(company__rfc="CNO200101AB9").count() == 5
+    assert Document.objects.filter(company__rfc="SDA210515XY1").count() == 5
+    assert Document.objects.filter(iva_transferred__gt=0).count() == 10
+    assert Document.objects.filter(iva_retained__gt=0).count() == 2
+    assert Document.objects.filter(isr_retained__gt=0).count() == 2
+    assert Document.objects.filter(fiscal_period__is_closed=True).count() == 4
+    assert Document.objects.filter(fiscal_period__is_closed=False).count() == 6
+
 
 def test_seed_is_idempotent(demo_password):
     call_command("seed_accounting_data", force=True, verbosity=0)
     first_counts = counts()
     first_company_ids = set(Company.objects.values_list("pk", flat=True))
     first_account_ids = set(AccountCatalog.objects.values_list("pk", flat=True))
+    first_document_ids = set(Document.objects.values_list("pk", flat=True))
 
     call_command("seed_accounting_data", force=True, verbosity=0)
 
     assert counts() == first_counts
     assert set(Company.objects.values_list("pk", flat=True)) == first_company_ids
     assert set(AccountCatalog.objects.values_list("pk", flat=True)) == first_account_ids
+    assert set(Document.objects.values_list("pk", flat=True)) == first_document_ids
 
 
 def test_seed_refuses_debug_false_without_force(demo_password, monkeypatch):

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.authentication",
     "apps.tenants",
     "apps.accounting",
+    "apps.documents",
 ]
 
 MIDDLEWARE = [
@@ -128,6 +129,17 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Private fiscal documents. MEDIA_ROOT is never exposed by Nginx [E-07].
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Upload limits [E-04]: XML <= 2 MB, PDF <= 5 MB, at most 50 files/request.
+DATA_UPLOAD_MAX_NUMBER_FILES = 50
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DOCUMENT_XML_MAX_SIZE = 2 * 1024 * 1024
+DOCUMENT_PDF_MAX_SIZE = 5 * 1024 * 1024
+DOCUMENT_MAX_FILES_PER_REQUEST = 50
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

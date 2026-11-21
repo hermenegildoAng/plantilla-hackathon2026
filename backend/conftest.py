@@ -19,6 +19,13 @@ def clear_throttle_cache():
     yield
 
 
+@pytest.fixture(autouse=True)
+def isolated_media_root(tmp_path, settings):
+    """Never write uploaded fiscal files into the developer's MEDIA_ROOT."""
+    settings.MEDIA_ROOT = tmp_path / "media"
+    yield
+
+
 @pytest.fixture
 def api_client():
     return APIClient()
