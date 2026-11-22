@@ -1,22 +1,38 @@
-"""Accounting endpoints: chart of accounts, fiscal periods and close/reopen."""
+"""Accounting endpoints: accounts, periods, entries and close/reopen."""
 
 import ipaddress
+from datetime import date
 
+from django.db.models import Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounting.models import AccountCatalog, FiscalPeriod
+from apps.accounting.models import (
+    AccountCatalog,
+    AccountingEntry,
+    FiscalPeriod,
+)
 from apps.accounting.serializers import (
     AccountCatalogSerializer,
     AccountCatalogTreeSerializer,
+    AccountingEntryDetailSerializer,
+    AccountingEntryWriteSerializer,
     FiscalPeriodSerializer,
     PeriodReopenSerializer,
 )
-from apps.accounting.services import close_period, reopen_period
+from apps.accounting.services import (
+    close_period,
+    create_accounting_entry,
+    delete_accounting_entry,
+    reopen_period,
+    update_accounting_entry,
+)
 from apps.authentication.permissions import (
     CanEditAccountCatalog,
+    CanManageAccounting,
     CanReadAccounting,
     IsPartnerRole,
 )
@@ -174,6 +190,173 @@ class AccountCatalogViewSet(
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+
+class AccountingEntryViewSet(
+    TenantContextMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """CRUD /api/v1/entries/ with the RBAC matrix from 03 §2.2."""
+
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
+
+    def get_permissions(self):
+        if self.action in {"list", "retrieve"}:
+            return [IsAuthenticated(), CanReadAccounting()]
+        if self.action in {"create", "update", "partial_update"}:
+            return [IsAuthenticated(), CanManageAccounting()]
+        if self.action == "destroy":
+            return [IsAuthenticated(), IsPartnerRole()]
+        return [IsAuthenticated(), CanReadAccounting()]
+
+    def get_queryset(self):
+        queryset = (
+            AccountingEntry.objects.filter(company=self.request.company)
+            .select_related("fiscal_period")
+            .prefetch_related("items__account", "items__document")
+        )
+
+        fiscal_period = self.request.query_params.get("fiscal_period")
+        if fiscal_period:
+            try:
+                fiscal_period_id = int(fiscal_period)
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    {
+                        "fiscal_period": ErrorDetail(
+                            "El periodo fiscal debe ser un número entero.",
+                            code="invalid",
+                        )
+                    }
+                ) from None
+            queryset = queryset.filter(fiscal_period_id=fiscal_period_id)
+
+        entry_type = self.request.query_params.get("entry_type")
+        if entry_type:
+            queryset = queryset.filter(entry_type=entry_type.upper())
+
+        entry_status = self.request.query_params.get("status")
+        if entry_status:
+            queryset = queryset.filter(status=entry_status.upper())
+
+        date_from = self._parse_date_param("date_from")
+        if date_from is not None:
+            queryset = queryset.filter(entry_date__gte=date_from)
+
+        date_to = self._parse_date_param("date_to")
+        if date_to is not None:
+            queryset = queryset.filter(entry_date__lte=date_to)
+
+        search = self.request.query_params.get("search")
+        if search:
+            term = search.strip()
+            queryset = queryset.filter(
+                Q(folio__icontains=term) | Q(concept__icontains=term)
+            )
+
+        return queryset
+
+    def _parse_date_param(self, field):
+        raw_value = self.request.query_params.get(field)
+        if not raw_value:
+            return None
+        try:
+            return date.fromisoformat(raw_value.strip())
+        except ValueError:
+            raise ValidationError(
+                {
+                    field: ErrorDetail(
+                        "La fecha debe tener el formato AAAA-MM-DD.",
+                        code="invalid",
+                    )
+                }
+            ) from None
+
+    def get_serializer_class(self):
+        if self.action in {"list", "retrieve"}:
+            return AccountingEntryDetailSerializer
+        return AccountingEntryWriteSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["company"] = getattr(self.request, "company", None)
+        return context
+
+    @staticmethod
+    def _split_payload(validated_data):
+        data = dict(validated_data)
+        items_data = data.pop("items", None)
+        fiscal_period = data.pop("fiscal_period", None)
+        return data, fiscal_period, items_data
+
+    def create(self, request, *args, **kwargs):
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        header_data, fiscal_period, items_data = self._split_payload(
+            payload.validated_data
+        )
+
+        entry = create_accounting_entry(
+            company=request.company,
+            fiscal_period=fiscal_period,
+            user=request.user,
+            header_data=header_data,
+            items_data=items_data,
+        )
+        response = Response(
+            AccountingEntryDetailSerializer(
+                entry,
+                context=self.get_serializer_context(),
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+        response.response_message = "Póliza registrada correctamente."
+        return response
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        payload = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+        )
+        payload.is_valid(raise_exception=True)
+        header_data, fiscal_period, items_data = self._split_payload(
+            payload.validated_data
+        )
+        if fiscal_period is not None:
+            header_data["fiscal_period"] = fiscal_period
+
+        entry = update_accounting_entry(
+            instance,
+            user=request.user,
+            header_data=header_data,
+            items_data=items_data,
+        )
+        response = Response(
+            AccountingEntryDetailSerializer(
+                entry,
+                context=self.get_serializer_context(),
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+        response.response_message = "Póliza actualizada correctamente."
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        entry = self.get_object()
+        delete_accounting_entry(
+            entry,
+            user=request.user,
+            ip_address=get_client_ip(request),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class FiscalPeriodViewSet(

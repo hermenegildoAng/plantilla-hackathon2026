@@ -3,7 +3,11 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.accounting.models import AccountCatalog, FiscalPeriod
+from apps.accounting.models import (
+    AccountCatalog,
+    AccountingEntry,
+    FiscalPeriod,
+)
 from apps.authentication.models import CompanyMembership, User
 from apps.core.models import AuditLog
 from apps.documents.models import Document
@@ -23,6 +27,7 @@ def counts():
         "accounts": AccountCatalog.objects.count(),
         "periods": FiscalPeriod.objects.count(),
         "documents": Document.objects.count(),
+        "entries": AccountingEntry.objects.count(),
         "audit_logs": AuditLog.objects.count(),
     }
 
@@ -43,6 +48,7 @@ def test_seed_creates_v1_demo_data(demo_password):
         "accounts": 160,
         "periods": 4,
         "documents": 10,
+        "entries": 7,
         "audit_logs": 2,
     }
 
@@ -92,6 +98,24 @@ def test_seed_creates_v1_demo_data(demo_password):
     assert Document.objects.filter(fiscal_period__is_closed=True).count() == 4
     assert Document.objects.filter(fiscal_period__is_closed=False).count() == 6
 
+    posted = AccountingEntry.objects.filter(
+        status=AccountingEntry.Status.POSTED
+    )
+    assert posted.count() == 6
+    assert posted.filter(entry_type=AccountingEntry.EntryType.INCOME).count() == 2
+    assert posted.filter(entry_type=AccountingEntry.EntryType.EXPENSE).count() == 2
+    assert posted.filter(entry_type=AccountingEntry.EntryType.JOURNAL).count() == 2
+    assert AccountingEntry.objects.filter(
+        status=AccountingEntry.Status.DRAFT
+    ).count() == 1
+    assert posted.filter(fiscal_period__is_closed=True).count() == 0
+    assert posted.filter(items__document__isnull=False).distinct().count() == 6
+    assert Document.objects.filter(is_accounted=True).count() == 6
+    for entry in AccountingEntry.objects.all():
+        assert entry.total_debit == entry.total_credit
+        assert entry.total_debit > 0
+        assert entry.items.count() >= 2
+
 
 def test_seed_is_idempotent(demo_password):
     call_command("seed_accounting_data", force=True, verbosity=0)
@@ -99,6 +123,7 @@ def test_seed_is_idempotent(demo_password):
     first_company_ids = set(Company.objects.values_list("pk", flat=True))
     first_account_ids = set(AccountCatalog.objects.values_list("pk", flat=True))
     first_document_ids = set(Document.objects.values_list("pk", flat=True))
+    first_entry_ids = set(AccountingEntry.objects.values_list("pk", flat=True))
 
     call_command("seed_accounting_data", force=True, verbosity=0)
 
@@ -106,6 +131,7 @@ def test_seed_is_idempotent(demo_password):
     assert set(Company.objects.values_list("pk", flat=True)) == first_company_ids
     assert set(AccountCatalog.objects.values_list("pk", flat=True)) == first_account_ids
     assert set(Document.objects.values_list("pk", flat=True)) == first_document_ids
+    assert set(AccountingEntry.objects.values_list("pk", flat=True)) == first_entry_ids
 
 
 def test_seed_refuses_debug_false_without_force(demo_password, monkeypatch):

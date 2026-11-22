@@ -1,7 +1,8 @@
-"""Idempotent demo seed for the accounting MVP (blocks 3 and 4)."""
+"""Idempotent demo seed for the accounting MVP (blocks 3, 4 and 5)."""
 
 import os
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,9 +10,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.accounting.models import AccountCatalog, FiscalPeriod
+from apps.accounting.models import AccountCatalog, AccountingEntry, FiscalPeriod
 from apps.accounting.services import (
     close_period,
+    create_accounting_entry,
     get_or_create_period,
 )
 from apps.authentication.models import CompanyMembership, User
@@ -75,7 +77,7 @@ def _previous_month(today):
 class Command(BaseCommand):
     help = (
         "Carga datos demo idempotentes: 2 empresas, 4 usuarios, membresías, "
-        "catálogo SAT clonado, periodos contables y 10 CFDI 4.0."
+        "catálogo SAT clonado, periodos contables, 10 CFDI 4.0 y 7 pólizas."
     )
 
     def add_arguments(self, parser):
@@ -111,13 +113,14 @@ class Command(BaseCommand):
         # the previous month is still open.
         self._seed_documents(companies, partner)
 
+        # Block 5: journal entries are also created with the API services
+        # before closing the previous month.
+        self._seed_entries(companies, periods["current"], partner)
+
         # E-25: close the previous month only after every demo row is loaded.
         for period in periods["previous"]:
             if not period.is_closed:
                 close_period(period, user=partner, ip_address="127.0.0.1")
-
-        # TODO(bloque 5): create the demo accounting entries and reconciliation
-        # movements with the same services used by the API.
 
         self._report_counts(companies)
 
@@ -178,6 +181,215 @@ class Command(BaseCommand):
             )
         return periods
 
+    def _seed_entries(self, companies, current_periods, partner):
+        """Create 6 balanced POSTED entries and 1 DRAFT with the API service."""
+        for index, (company, period) in enumerate(
+            zip(companies, current_periods)
+        ):
+            documents = list(
+                Document.objects.filter(
+                    company=company,
+                    fiscal_period=period,
+                ).order_by("direction", "series", "folio", "pk")
+            )
+            issued = [
+                document
+                for document in documents
+                if document.direction == Document.Direction.ISSUED
+            ]
+            received = [
+                document
+                for document in documents
+                if document.direction == Document.Direction.RECEIVED
+            ]
+            if len(issued) < 2 or not received:
+                continue
+
+            self._create_income_entry(company, partner, issued[0])
+            self._create_expense_entry(company, partner, received[0])
+            self._create_journal_entry(company, partner, issued[1])
+
+            if index == 0:
+                self._create_draft_entry(company, partner)
+
+    def _account(self, company, code):
+        return AccountCatalog.objects.get(company=company, code=code)
+
+    def _entry_exists(self, company, entry_type, status, concept):
+        return AccountingEntry.objects.filter(
+            company=company,
+            entry_type=entry_type,
+            status=status,
+            concept=concept,
+        ).exists()
+
+    def _document_date(self, document):
+        return timezone.localtime(document.issue_date).date()
+
+    def _save_seed_entry(
+        self,
+        *,
+        company,
+        user,
+        entry_type,
+        status,
+        entry_date,
+        concept,
+        items_data,
+    ):
+        if self._entry_exists(company, entry_type, status, concept):
+            return None
+        return create_accounting_entry(
+            company=company,
+            user=user,
+            header_data={
+                "entry_type": entry_type,
+                "status": status,
+                "entry_date": entry_date,
+                "concept": concept,
+            },
+            items_data=items_data,
+        )
+
+    def _create_income_entry(self, company, user, document):
+        entry_date = self._document_date(document)
+        concept = (
+            "Seed demo · Ingreso por servicios factura "
+            f"{document.series}-{document.folio}"
+        )
+        self._save_seed_entry(
+            company=company,
+            user=user,
+            entry_type=AccountingEntry.EntryType.INCOME,
+            status=AccountingEntry.Status.POSTED,
+            entry_date=entry_date,
+            concept=concept,
+            items_data=[
+                {
+                    "account": self._account(company, "105.01"),
+                    "document": document,
+                    "description": "Cliente nacional",
+                    "debit": document.total,
+                    "credit": Decimal("0.00"),
+                },
+                {
+                    "account": self._account(company, "401.01"),
+                    "document": document,
+                    "description": "Ingreso por servicios",
+                    "debit": Decimal("0.00"),
+                    "credit": document.subtotal,
+                },
+                {
+                    "account": self._account(company, "207.01"),
+                    "document": document,
+                    "description": "IVA trasladado",
+                    "debit": Decimal("0.00"),
+                    "credit": document.iva_transferred,
+                },
+            ],
+        )
+
+    def _create_expense_entry(self, company, user, document):
+        entry_date = self._document_date(document)
+        concept = (
+            "Seed demo · Egreso por servicios factura "
+            f"{document.series}-{document.folio}"
+        )
+        self._save_seed_entry(
+            company=company,
+            user=user,
+            entry_type=AccountingEntry.EntryType.EXPENSE,
+            status=AccountingEntry.Status.POSTED,
+            entry_date=entry_date,
+            concept=concept,
+            items_data=[
+                {
+                    "account": self._account(company, "601.38"),
+                    "document": document,
+                    "description": "Honorarios de servicios",
+                    "debit": document.subtotal,
+                    "credit": Decimal("0.00"),
+                },
+                {
+                    "account": self._account(company, "118.01"),
+                    "document": document,
+                    "description": "IVA acreditable pagado",
+                    "debit": document.iva_transferred,
+                    "credit": Decimal("0.00"),
+                },
+                {
+                    "account": self._account(company, "102.01.001"),
+                    "document": document,
+                    "description": "Pago con transferencia SPEI",
+                    "debit": Decimal("0.00"),
+                    "credit": document.total,
+                },
+            ],
+        )
+
+    def _create_journal_entry(self, company, user, document):
+        entry_date = self._document_date(document)
+        concept = (
+            "Seed demo · Reclasificación contable factura "
+            f"{document.series}-{document.folio}"
+        )
+        self._save_seed_entry(
+            company=company,
+            user=user,
+            entry_type=AccountingEntry.EntryType.JOURNAL,
+            status=AccountingEntry.Status.POSTED,
+            entry_date=entry_date,
+            concept=concept,
+            items_data=[
+                {
+                    "account": self._account(company, "105.01"),
+                    "document": document,
+                    "description": "Cliente nacional",
+                    "debit": document.total,
+                    "credit": Decimal("0.00"),
+                },
+                {
+                    "account": self._account(company, "401.01"),
+                    "document": document,
+                    "description": "Reclasificación de ingreso",
+                    "debit": Decimal("0.00"),
+                    "credit": document.subtotal,
+                },
+                {
+                    "account": self._account(company, "207.01"),
+                    "document": document,
+                    "description": "IVA trasladado",
+                    "debit": Decimal("0.00"),
+                    "credit": document.iva_transferred,
+                },
+            ],
+        )
+
+    def _create_draft_entry(self, company, user):
+        concept = "Seed demo · Borrador de póliza de diario"
+        self._save_seed_entry(
+            company=company,
+            user=user,
+            entry_type=AccountingEntry.EntryType.JOURNAL,
+            status=AccountingEntry.Status.DRAFT,
+            entry_date=timezone.localdate(),
+            concept=concept,
+            items_data=[
+                {
+                    "account": self._account(company, "101.01"),
+                    "description": "Fondo de caja para operación",
+                    "debit": Decimal("1000.00"),
+                    "credit": Decimal("0.00"),
+                },
+                {
+                    "account": self._account(company, "401.01"),
+                    "description": "Ingreso pendiente de contabilizar",
+                    "debit": Decimal("0.00"),
+                    "credit": Decimal("1000.00"),
+                },
+            ],
+        )
+
     def _seed_documents(self, companies, partner):
         """Generate and ingest 10 CFDI 4.0 files (5 per demo company)."""
         today = timezone.localdate()
@@ -220,6 +432,8 @@ class Command(BaseCommand):
             "periodos: "
             f"{FiscalPeriod.objects.filter(company_id__in=company_ids).count()}, "
             "documentos: "
-            f"{Document.objects.filter(company_id__in=company_ids).count()}."
+            f"{Document.objects.filter(company_id__in=company_ids).count()}, "
+            "pólizas: "
+            f"{AccountingEntry.objects.filter(company_id__in=company_ids).count()}."
         )
         self.stdout.write(self.style.SUCCESS("Seed contable v1 completado."))

@@ -1,11 +1,22 @@
-"""Serializers for the accounting catalog, periods and governance actions."""
+"""Serializers for the accounting catalog, periods, entries and governance."""
+
+from decimal import Decimal
 
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail, PermissionDenied
 
-from apps.accounting.models import AccountCatalog, FiscalPeriod
-from apps.accounting.services import JUSTIFICATION_MIN_LENGTH
+from apps.accounting.models import (
+    AccountCatalog,
+    AccountingEntry,
+    AccountingEntryItem,
+    FiscalPeriod,
+)
+from apps.accounting.services import (
+    JUSTIFICATION_MIN_LENGTH,
+    get_or_create_period,
+)
 from apps.authentication.models import CompanyMembership
+from apps.documents.models import Document
 
 
 class AccountCatalogSerializer(serializers.ModelSerializer):
@@ -154,12 +165,310 @@ class FiscalPeriodSerializer(serializers.ModelSerializer):
         return obj.closed_by.full_name if obj.closed_by_id else None
 
     def get_entries_count(self, obj):
-        # TODO(bloque 5): count AccountingEntry rows for this period.
-        return 0
+        return obj.entries.count()
 
     def get_unaccounted_documents_count(self, obj):
         # Documents without a linked accounting entry (block 5 will link them).
         return obj.documents.filter(is_accounted=False).count()
+
+
+class AccountingEntryItemReadSerializer(serializers.ModelSerializer):
+    """Journal entry line returned by GET /entries/."""
+
+    account_code = serializers.CharField(source="account.code", read_only=True)
+    account_name = serializers.CharField(source="account.name", read_only=True)
+    document_uuid = serializers.UUIDField(
+        source="document.uuid",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = AccountingEntryItem
+        fields = [
+            "id",
+            "line_number",
+            "account",
+            "account_code",
+            "account_name",
+            "document",
+            "document_uuid",
+            "description",
+            "debit",
+            "credit",
+        ]
+        read_only_fields = fields
+
+
+class AccountingEntryDetailSerializer(serializers.ModelSerializer):
+    """Entry payload from 03 §3.5."""
+
+    period_label = serializers.SerializerMethodField()
+    items = AccountingEntryItemReadSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AccountingEntry
+        fields = [
+            "id",
+            "fiscal_period",
+            "period_label",
+            "entry_type",
+            "folio",
+            "entry_date",
+            "concept",
+            "status",
+            "total_debit",
+            "total_credit",
+            "items",
+        ]
+        read_only_fields = fields
+
+    def get_period_label(self, obj):
+        return f"{obj.fiscal_period.year}-{obj.fiscal_period.month:02d}"
+
+
+class AccountingEntryItemWriteSerializer(serializers.Serializer):
+    """Validate one journal entry line (03 §3.5 rules 4 and 5)."""
+
+    account = serializers.PrimaryKeyRelatedField(
+        queryset=AccountCatalog.objects.all(),
+    )
+    document = serializers.PrimaryKeyRelatedField(
+        queryset=Document.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    description = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    debit = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+        default=Decimal("0.00"),
+    )
+    credit = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+        default=Decimal("0.00"),
+    )
+
+    def _company(self):
+        company = self.context.get("company")
+        if company is None:
+            request = self.context.get("request")
+            company = getattr(request, "company", None)
+        return company
+
+    def validate(self, attrs):
+        company = self._company()
+        account = attrs.get("account")
+        if company is not None and account is not None:
+            if account.company_id != company.pk:
+                raise serializers.ValidationError(
+                    {
+                        "account": ErrorDetail(
+                            "La cuenta contable no pertenece a la empresa de la "
+                            "póliza.",
+                            code="non_selectable_account",
+                        )
+                    }
+                )
+            if not account.is_selectable:
+                raise serializers.ValidationError(
+                    {
+                        "account": ErrorDetail(
+                            f"La cuenta {account.code} es acumulativa y no "
+                            "acepta movimientos directos.",
+                            code="non_selectable_account",
+                        )
+                    }
+                )
+
+        document = attrs.get("document")
+        if (
+            company is not None
+            and document is not None
+            and document.company_id != company.pk
+        ):
+            raise serializers.ValidationError(
+                {
+                    "document": ErrorDetail(
+                        "El documento no pertenece a la empresa de la póliza.",
+                        code="invalid_document",
+                    )
+                }
+            )
+
+        debit = attrs.get("debit", Decimal("0.00"))
+        credit = attrs.get("credit", Decimal("0.00"))
+        if (debit > Decimal("0.00") and credit > Decimal("0.00")) or (
+            debit == Decimal("0.00") and credit == Decimal("0.00")
+        ):
+            raise serializers.ValidationError(
+                {
+                    "debit": ErrorDetail(
+                        "Cada renglón debe tener un monto mayor a cero en Cargo "
+                        "o Abono, pero no en ambos.",
+                        code="invalid_line_amounts",
+                    )
+                }
+            )
+        return attrs
+
+
+class AccountingEntryWriteSerializer(serializers.Serializer):
+    """Validate an entry payload with the seven rules from 03 §3.5."""
+
+    fiscal_period = serializers.PrimaryKeyRelatedField(
+        queryset=FiscalPeriod.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    entry_type = serializers.ChoiceField(choices=AccountingEntry.EntryType.choices)
+    entry_date = serializers.DateField()
+    concept = serializers.CharField(max_length=500)
+    status = serializers.ChoiceField(
+        choices=AccountingEntry.Status.choices,
+        required=False,
+    )
+    items = AccountingEntryItemWriteSerializer(many=True)
+
+    def _company(self):
+        company = self.context.get("company")
+        if company is None:
+            request = self.context.get("request")
+            company = getattr(request, "company", None)
+        return company
+
+    def _raise_period_closed(self, period):
+        raise serializers.ValidationError(
+            {
+                "fiscal_period": ErrorDetail(
+                    f"El periodo {period.year}-{period.month:02d} está cerrado.",
+                    code="period_closed",
+                )
+            }
+        )
+
+    def validate(self, attrs):
+        company = self._company()
+        instance = self.instance
+
+        entry_date = attrs.get(
+            "entry_date",
+            getattr(instance, "entry_date", None),
+        )
+        if entry_date is None:
+            raise serializers.ValidationError(
+                {"entry_date": "La fecha de la póliza es obligatoria."}
+            )
+
+        if instance is not None and instance.fiscal_period.is_closed:
+            self._raise_period_closed(instance.fiscal_period)
+
+        period = attrs.get("fiscal_period")
+        if period is not None:
+            if company is not None and period.company_id != company.pk:
+                raise serializers.ValidationError(
+                    {
+                        "fiscal_period": ErrorDetail(
+                            "El periodo fiscal no pertenece a la empresa "
+                            "seleccionada.",
+                            code="invalid_fiscal_period",
+                        )
+                    }
+                )
+            if (
+                entry_date.year != period.year
+                or entry_date.month != period.month
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "entry_date": ErrorDetail(
+                            "La fecha de la póliza debe caer dentro del periodo "
+                            f"fiscal {period.year}-{period.month:02d}.",
+                            code="entry_date_out_of_period",
+                        )
+                    }
+                )
+            if period.is_closed:
+                self._raise_period_closed(period)
+        elif company is not None:
+            resolved = get_or_create_period(company, entry_date)
+            if resolved.is_closed:
+                self._raise_period_closed(resolved)
+
+        if "items" in attrs:
+            items = attrs["items"]
+        elif instance is not None:
+            items = [
+                {
+                    "debit": item.debit,
+                    "credit": item.credit,
+                }
+                for item in instance.items.all()
+            ]
+        else:
+            items = []
+
+        if len(items) < 2:
+            raise serializers.ValidationError(
+                {
+                    "items": ErrorDetail(
+                        "La póliza debe contener al menos dos renglones.",
+                        code="invalid_line_amounts",
+                    )
+                }
+            )
+
+        total_debit = sum(
+            (
+                item.get("debit", Decimal("0.00"))
+                if isinstance(item, dict)
+                else item.debit
+                for item in items
+            ),
+            Decimal("0.00"),
+        )
+        total_credit = sum(
+            (
+                item.get("credit", Decimal("0.00"))
+                if isinstance(item, dict)
+                else item.credit
+                for item in items
+            ),
+            Decimal("0.00"),
+        )
+
+        if total_debit <= Decimal("0.00") or total_credit <= Decimal("0.00"):
+            raise serializers.ValidationError(
+                {
+                    "items": ErrorDetail(
+                        "La suma de cargos y abonos debe ser estrictamente "
+                        "mayor a cero.",
+                        code="unbalanced_entry",
+                    )
+                }
+            )
+
+        if total_debit != total_credit:
+            raise serializers.ValidationError(
+                {
+                    "items": ErrorDetail(
+                        "Póliza descuadrada: "
+                        f"Cargos (${total_debit:.2f}) != "
+                        f"Abonos (${total_credit:.2f}).",
+                        code="unbalanced_entry",
+                    )
+                }
+            )
+
+        return attrs
 
 
 class PeriodReopenSerializer(serializers.Serializer):
