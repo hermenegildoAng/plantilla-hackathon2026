@@ -11,6 +11,7 @@ from apps.accounting.models import (
 from apps.authentication.models import CompanyMembership, User
 from apps.core.models import AuditLog
 from apps.documents.models import Document
+from apps.reconciliation.models import BankMovement
 from apps.tenants.models import Company
 
 
@@ -28,6 +29,7 @@ def counts():
         "periods": FiscalPeriod.objects.count(),
         "documents": Document.objects.count(),
         "entries": AccountingEntry.objects.count(),
+        "bank_movements": BankMovement.objects.count(),
         "audit_logs": AuditLog.objects.count(),
     }
 
@@ -49,6 +51,7 @@ def test_seed_creates_v1_demo_data(demo_password):
         "periods": 4,
         "documents": 10,
         "entries": 7,
+        "bank_movements": 12,
         "audit_logs": 2,
     }
 
@@ -116,6 +119,15 @@ def test_seed_creates_v1_demo_data(demo_password):
         assert entry.total_debit > 0
         assert entry.items.count() >= 2
 
+    assert BankMovement.objects.count() == 12
+    for company in Company.objects.all():
+        assert BankMovement.objects.filter(company=company).count() == 6
+    # Half of the movements carry the folio of a seed entry and have an exact
+    # amount/date match, so they are reconcilable with the demo entries.
+    assert BankMovement.objects.filter(
+        reference__in=posted.values_list("folio", flat=True)
+    ).count() == 6
+
 
 def test_seed_is_idempotent(demo_password):
     call_command("seed_accounting_data", force=True, verbosity=0)
@@ -124,6 +136,9 @@ def test_seed_is_idempotent(demo_password):
     first_account_ids = set(AccountCatalog.objects.values_list("pk", flat=True))
     first_document_ids = set(Document.objects.values_list("pk", flat=True))
     first_entry_ids = set(AccountingEntry.objects.values_list("pk", flat=True))
+    first_bank_movement_ids = set(
+        BankMovement.objects.values_list("pk", flat=True)
+    )
 
     call_command("seed_accounting_data", force=True, verbosity=0)
 
@@ -132,6 +147,10 @@ def test_seed_is_idempotent(demo_password):
     assert set(AccountCatalog.objects.values_list("pk", flat=True)) == first_account_ids
     assert set(Document.objects.values_list("pk", flat=True)) == first_document_ids
     assert set(AccountingEntry.objects.values_list("pk", flat=True)) == first_entry_ids
+    assert (
+        set(BankMovement.objects.values_list("pk", flat=True))
+        == first_bank_movement_ids
+    )
 
 
 def test_seed_refuses_debug_false_without_force(demo_password, monkeypatch):

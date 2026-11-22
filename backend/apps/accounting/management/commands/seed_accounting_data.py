@@ -1,5 +1,7 @@
 """Idempotent demo seed for the accounting MVP (blocks 3, 4 and 5)."""
 
+import csv
+import io
 import os
 from datetime import timedelta
 from decimal import Decimal
@@ -20,6 +22,8 @@ from apps.authentication.models import CompanyMembership, User
 from apps.documents.demo_data import build_demo_cfdi_files
 from apps.documents.models import Document
 from apps.documents.services import process_bulk_upload
+from apps.reconciliation.models import BankMovement
+from apps.reconciliation.services import import_bank_movements
 from apps.tenants.models import Company
 from apps.tenants.services import clone_master_sat_catalog
 
@@ -77,7 +81,8 @@ def _previous_month(today):
 class Command(BaseCommand):
     help = (
         "Carga datos demo idempotentes: 2 empresas, 4 usuarios, membresías, "
-        "catálogo SAT clonado, periodos contables, 10 CFDI 4.0 y 7 pólizas."
+        "catálogo SAT clonado, periodos contables, 10 CFDI 4.0, 7 pólizas y "
+        "12 movimientos bancarios importados desde CSV."
     )
 
     def add_arguments(self, parser):
@@ -116,6 +121,10 @@ class Command(BaseCommand):
         # Block 5: journal entries are also created with the API services
         # before closing the previous month.
         self._seed_entries(companies, periods["current"], partner)
+
+        # Block 6: 12 bank movements are imported from CSV. Half of them have
+        # an exact amount/date match against the entries created above.
+        self._seed_bank_movements(companies, periods["current"])
 
         # E-25: close the previous month only after every demo row is loaded.
         for period in periods["previous"]:
@@ -418,6 +427,98 @@ class Command(BaseCommand):
                 f"{result['summary']['failed_count']} omitidos."
             )
 
+    def _seed_bank_movements(self, companies, current_periods):
+        """Import 12 bank movements from CSV (6 per company, 3 matchable)."""
+        for index, (company, period) in enumerate(
+            zip(companies, current_periods)
+        ):
+            rows = []
+            posted_entries = list(
+                AccountingEntry.objects.filter(
+                    company=company,
+                    fiscal_period=period,
+                    status=AccountingEntry.Status.POSTED,
+                ).order_by("entry_date", "pk")[:3]
+            )
+
+            for entry in posted_entries:
+                if entry.entry_type == AccountingEntry.EntryType.EXPENSE:
+                    deposit = Decimal("0.00")
+                    withdrawal = entry.total_credit
+                else:
+                    deposit = entry.total_debit
+                    withdrawal = Decimal("0.00")
+                rows.append(
+                    {
+                        "date": entry.entry_date.isoformat(),
+                        "reference": entry.folio,
+                        "description": (
+                            f"Transferencia SPEI póliza {entry.folio}"
+                        ),
+                        "deposit": format(deposit, ".2f"),
+                        "withdrawal": format(withdrawal, ".2f"),
+                    }
+                )
+
+            # Three rows per company intentionally do not match any seed entry.
+            unmatched = [
+                (
+                    5,
+                    f"COM-{company.pk}",
+                    "Comisión bancaria mensual",
+                    "0.00",
+                    format(Decimal("250.00") + (index * 10), ".2f"),
+                ),
+                (
+                    6,
+                    f"SERV-{company.pk}",
+                    "Pago de servicios generales",
+                    "0.00",
+                    format(Decimal("1890.50") + (index * 10), ".2f"),
+                ),
+                (
+                    7,
+                    f"DEP-{company.pk}",
+                    "Depósito no identificado",
+                    format(Decimal("4321.00") + (index * 10), ".2f"),
+                    "0.00",
+                ),
+            ]
+            for day, reference, description, deposit, withdrawal in unmatched:
+                rows.append(
+                    {
+                        "date": f"{period.year}-{period.month:02d}-{day:02d}",
+                        "reference": reference,
+                        "description": description,
+                        "deposit": deposit,
+                        "withdrawal": withdrawal,
+                    }
+                )
+
+            buffer = io.StringIO()
+            writer = csv.DictWriter(
+                buffer,
+                fieldnames=[
+                    "date",
+                    "reference",
+                    "description",
+                    "deposit",
+                    "withdrawal",
+                ],
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+            result = import_bank_movements(
+                company=company,
+                file_obj=io.BytesIO(buffer.getvalue().encode("utf-8")),
+            )
+            self.stdout.write(
+                f"Movimientos bancarios {company.rfc}: "
+                f"{result['summary']['imported']} importados, "
+                f"{result['summary']['skipped_duplicates']} duplicados, "
+                f"{result['summary']['invalid']} inválidos."
+            )
+
     def _report_counts(self, companies):
         company_ids = [company.pk for company in companies]
         self.stdout.write(
@@ -434,6 +535,8 @@ class Command(BaseCommand):
             "documentos: "
             f"{Document.objects.filter(company_id__in=company_ids).count()}, "
             "pólizas: "
-            f"{AccountingEntry.objects.filter(company_id__in=company_ids).count()}."
+            f"{AccountingEntry.objects.filter(company_id__in=company_ids).count()}, "
+            "movimientos bancarios: "
+            f"{BankMovement.objects.filter(company_id__in=company_ids).count()}."
         )
         self.stdout.write(self.style.SUCCESS("Seed contable v1 completado."))

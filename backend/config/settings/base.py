@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "drf_spectacular",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "apps.core",
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     "apps.tenants",
     "apps.accounting",
     "apps.documents",
+    "apps.reconciliation",
 ]
 
 MIDDLEWARE = [
@@ -140,6 +142,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DOCUMENT_XML_MAX_SIZE = 2 * 1024 * 1024
 DOCUMENT_PDF_MAX_SIZE = 5 * 1024 * 1024
 DOCUMENT_MAX_FILES_PER_REQUEST = 50
+BANK_MOVEMENT_CSV_MAX_SIZE = 5 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -151,10 +154,31 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.StandardResultsSetPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_THROTTLE_RATES": {
         "login": "5/min",
+    },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API Contable Multi-Tenant",
+    "DESCRIPTION": (
+        "API REST del sistema contable multi-tenant para México. Todas las "
+        "respuestas exitosas usan el envoltorio {success, message, data, "
+        "errors}; los errores usan {success, message, error_id, data, errors} "
+        "con errors como arreglo de {field, code, message}."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "POSTPROCESSING_HOOKS": [
+        "apps.core.schema.standard_contract_postprocessor",
+    ],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
     },
 }
 
