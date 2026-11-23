@@ -1,7 +1,7 @@
 # Sistema contable multi-tenant (México)
 
 Monorepo del MVP contable: Django 5 + Django REST Framework + PostgreSQL 16 en
-el backend y Vue 3 + Pinia + Tailwind en el frontend (placeholder en el bloque 1).
+el backend y Vue 3 + Pinia + Tailwind en el frontend.
 
 ## Estructura
 
@@ -22,10 +22,12 @@ docker compose up --build
 ```
 
 La API queda disponible en `http://localhost:8000/api/v1/`.
-El servicio `frontend` permanece comentado en `docker-compose.yml` durante el
-bloque 1.
+La interfaz queda disponible en `http://localhost:5173/`; Vite proxya `/api`
+hacia el servicio `backend` dentro de la red de Docker Compose.
 
 ## Puesta en marcha local
+
+Backend:
 
 ```bash
 cd backend
@@ -37,12 +39,19 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Frontend (Vite proxya `/api` a `http://localhost:8000`):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 ## Verificación
 
 ```bash
 curl http://localhost:8000/api/v1/health/
 ```
-
 Respuesta esperada:
 
 ```json
@@ -62,6 +71,13 @@ Con PostgreSQL levantado (`docker compose up -d db`):
 cd backend
 source .venv/bin/activate
 pytest
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm test
 ```
 
 ## Variables de entorno
