@@ -5,6 +5,7 @@ import { ROLES } from '../composables/useRBAC'
 import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
 import { useTenantStore } from '../stores/tenant'
+import DocumentsView from '../views/DocumentsView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
@@ -53,7 +54,7 @@ export const routes = [
       {
         path: 'documents',
         name: 'documents',
-        component: PlaceholderView,
+        component: DocumentsView,
         meta: {
           title: 'Documentos',
           description:

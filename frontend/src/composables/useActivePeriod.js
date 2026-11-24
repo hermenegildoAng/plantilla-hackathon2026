@@ -15,8 +15,8 @@ const MONTHS = [
   'Diciembre',
 ]
 
-// Estado compartido del shell. El bloque 8+ lo reemplazará por el periodo
-// fiscal real que devuelva la API de periodos.
+// Estado compartido del shell. La vista de documentos lo sincroniza con el
+// periodo fiscal real que devuelve GET /periods/ (bloque 8).
 const isClosed = ref(false)
 const referenceDate = ref(new Date())
 
@@ -27,7 +27,6 @@ export function useActivePeriod() {
   )
   const fiscalYear = computed(() => referenceDate.value.getFullYear())
 
-  // TODO(bloque 8): conectar con GET /periods/ para reflejar cierres reales.
   function setClosed(value) {
     isClosed.value = Boolean(value)
   }
@@ -36,11 +35,22 @@ export function useActivePeriod() {
     referenceDate.value = value instanceof Date ? value : new Date(value)
   }
 
+  /** Sincroniza el shell con el periodo fiscal seleccionado. */
+  function setFromPeriod(period) {
+    if (!period) {
+      setClosed(false)
+      return
+    }
+    setReferenceDate(new Date(period.year, period.month - 1, 1))
+    setClosed(Boolean(period.is_closed))
+  }
+
   return {
     periodLabel,
     fiscalYear,
     isClosed,
     setClosed,
     setReferenceDate,
+    setFromPeriod,
   }
 }
