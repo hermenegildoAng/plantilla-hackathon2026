@@ -57,17 +57,18 @@ class AccountCatalogViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    """GET/POST/PATCH /api/v1/accounts/ [E-12]."""
+    """GET/POST/PATCH/DELETE /api/v1/accounts/ [E-12]."""
 
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
     serializer_class = AccountCatalogSerializer
 
     def get_permissions(self):
         if self.action in {"list"}:
             return [IsAuthenticated(), CanReadAccounting()]
-        if self.action == "create":
+        if self.action in {"create", "destroy"}:
             return [IsAuthenticated(), IsPartnerRole()]
         return [IsAuthenticated(), CanEditAccountCatalog()]
 
@@ -190,6 +191,32 @@ class AccountCatalogViewSet(
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    def destroy(self, request, *args, **kwargs):
+        account = self.get_object()
+        if account.children.exists():
+            raise ValidationError(
+                {
+                    "detail": ErrorDetail(
+                        "La cuenta tiene cuentas hijas. Reasígnelas o "
+                        "desactívela antes de eliminarla.",
+                        code="account_has_children",
+                    )
+                }
+            )
+        if account.entry_items.exists():
+            raise ValidationError(
+                {
+                    "detail": ErrorDetail(
+                        "La cuenta tiene movimientos contables y no puede "
+                        "eliminarse. Desactívela para conservar el historial.",
+                        code="account_has_movements",
+                    )
+                }
+            )
+
+        account.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountingEntryViewSet(

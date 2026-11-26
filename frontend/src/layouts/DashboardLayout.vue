@@ -46,7 +46,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const tenant = useTenantStore()
 const { navItems, roleLabel } = useRBAC()
-const { periodLabel, isClosed } = useActivePeriod()
+const { periodLabel, fiscalYear, isClosed } = useActivePeriod()
 const toast = useToast()
 
 const collapsed = ref(readCollapsed())
@@ -170,6 +170,9 @@ async function handleLogout() {
             </p>
             <p class="truncate text-xs font-medium text-slate-200">
               {{ periodLabel }}
+            </p>
+            <p class="text-[10px] text-slate-500">
+              Ejercicio {{ fiscalYear }} · {{ isClosed ? 'Cerrado' : 'Abierto' }}
             </p>
           </div>
         </div>

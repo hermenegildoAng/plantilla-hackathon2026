@@ -271,6 +271,48 @@ def test_auditor_and_client_cannot_patch_accounts(role, tenant_user):
     assert response.status_code == 403
 
 
+@pytest.mark.parametrize(
+    "role,expected_status",
+    [
+        (CompanyMembership.Role.PARTNER, 204),
+        (CompanyMembership.Role.ACCOUNTANT, 403),
+        (CompanyMembership.Role.AUDITOR, 403),
+        (CompanyMembership.Role.CLIENT, 403),
+    ],
+)
+def test_account_delete_permission_matrix(role, expected_status, tenant_user):
+    _user, company, _membership, client = tenant_user(role=role)
+    account = AccountCatalog.objects.create(
+        company=company,
+        code="999.01",
+        sat_group_code="999",
+        name="Cuenta eliminable",
+        account_type=AccountCatalog.AccountType.ASSET,
+        nature=AccountCatalog.Nature.DEBIT,
+        is_selectable=True,
+    )
+
+    response = client.delete(account_url(account), **headers(company))
+
+    assert response.status_code == expected_status
+    if expected_status == 204:
+        assert not AccountCatalog.objects.filter(pk=account.pk).exists()
+    else:
+        assert AccountCatalog.objects.filter(pk=account.pk).exists()
+
+
+def test_cannot_delete_account_with_children(tenant_user):
+    _user, company, _membership, client = tenant_user()
+    clone_master_sat_catalog(company)
+    parent = AccountCatalog.objects.get(company=company, code="102.01")
+
+    response = client.delete(account_url(parent), **headers(company))
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "account_has_children"
+    assert AccountCatalog.objects.filter(pk=parent.pk).exists()
+
+
 def test_company_creation_clones_the_sat_catalog(tenant_user):
     _user, _company, _membership, client = tenant_user()
 

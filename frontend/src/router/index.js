@@ -5,9 +5,13 @@ import { ROLES } from '../composables/useRBAC'
 import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
 import { useTenantStore } from '../stores/tenant'
+import AccountsView from '../views/AccountsView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
+import EntriesView from '../views/EntriesView.vue'
+import EntryFormView from '../views/EntryFormView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import PeriodsView from '../views/PeriodsView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
 import SelectCompanyView from '../views/SelectCompanyView.vue'
 
@@ -65,7 +69,7 @@ export const routes = [
       {
         path: 'entries',
         name: 'entries',
-        component: PlaceholderView,
+        component: EntriesView,
         meta: {
           title: 'Pólizas',
           description:
@@ -74,9 +78,31 @@ export const routes = [
         },
       },
       {
+        path: 'entries/new',
+        name: 'entry-create',
+        component: EntryFormView,
+        meta: {
+          title: 'Nueva póliza',
+          description:
+            'Captura de una póliza contable con validación de partida doble.',
+          roles: [ROLES.PARTNER, ROLES.ACCOUNTANT],
+        },
+      },
+      {
+        path: 'entries/:entryId/edit',
+        name: 'entry-edit',
+        component: EntryFormView,
+        meta: {
+          title: 'Editar póliza',
+          description:
+            'Edición de una póliza contable con validación de partida doble.',
+          roles: [ROLES.PARTNER, ROLES.ACCOUNTANT],
+        },
+      },
+      {
         path: 'periods',
         name: 'periods',
-        component: PlaceholderView,
+        component: PeriodsView,
         meta: {
           title: 'Periodos',
           description:
@@ -87,7 +113,7 @@ export const routes = [
       {
         path: 'accounts',
         name: 'accounts',
-        component: PlaceholderView,
+        component: AccountsView,
         meta: {
           title: 'Catálogo de cuentas',
           description:
